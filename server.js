@@ -41,19 +41,13 @@ const mensajeSchema = new mongoose.Schema({
 const Mensaje = mongoose.model('Mensaje', mensajeSchema);
 
 // Socket.IO: Manejar conexiones y mensajes
-io.on('connection', async (socket) => {
+io.on('connection', (socket) => {
   console.log('Cliente conectado', socket.id);
 
-  // Mensaje de conexión en la base de datos
-  const mensajeConexion = {
-    texto: `${socket.id} se ha conectado.`,
-    autor: 'Sistema',
-    fecha: new Date()
-  };
-
-  const nuevoMensaje = new Mensaje(mensajeConexion);
-  await nuevoMensaje.save();
-  io.emit('mensajeRecibido', nuevoMensaje);
+  // Enviar mensajes existentes al cliente cuando se conecta
+  Mensaje.find().then((mensajes) => {
+    socket.emit('cargarMensajes', mensajes);
+  });
 
   // Cuando el cliente envía un mensaje
   socket.on('enviarMensaje', async (data) => {
@@ -64,19 +58,9 @@ io.on('connection', async (socket) => {
     io.emit('mensajeRecibido', nuevoMensaje);
   });
 
-  // Enviar mensajes existentes al cliente cuando se conecta
-  Mensaje.find().then((mensajes) => {
-    socket.emit('cargarMensajes', mensajes);
-  });
-
   socket.on('disconnect', () => {
     console.log('Cliente desconectado', socket.id);
   });
-});
-
-// Ruta para verificar que el servidor funciona
-app.get('/', (req, res) => {
-  res.send('Servidor funcionando correctamente con Socket.IO!');
 });
 
 // Iniciar el servidor con Socket.IO
